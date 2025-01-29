@@ -1,64 +1,82 @@
 'use client';
-import {blog_data} from '@/Assets/assets';
 import Image from 'next/image';
-import React, {useState} from 'react'
-import { assets } from '@/Assets/assets';
-import { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Footer from '@/Components/Footer';
 import Link from 'next/link';
+import { assets } from '@/Assets/assets'; // Assuming your assets (like arrows) are imported this way
+import Header from '@/Components/Header';
 
-const page = ({params}) => {
+const BlogPage = ({ params }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-    const [data,setData] = useState(null);
+  useEffect(() => {
+    const fetchBlogData = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/blogs/${params.id}`);
 
-    const fetchBlogData = () => {
-        for(let i=0;i<blog_data.length;i++){
-            if(Number(params.id)===blog_data[i].id){
-                setData(blog_data[i]);
-                console.log(blog_data[i]);
-                break;
-            }
+        if (!response.ok) {
+          throw new Error('Blog not found');
         }
-    }
 
-    useEffect(()=>{
-        fetchBlogData();
-    },[])
+        const blogData = await response.json();
+        setData(blogData);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return ( data?<>
-    <div className='bg-gray-200 py-5 px-5 md:px-12 lg:px-28'>
+    fetchBlogData();
+  }, [params.id]);
+
+  if (loading) return <p className="text-center mt-10">Loading...</p>;
+  if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
+
+  return data ? (
+    <>
+    <div className='py-5 px-5 md:px-12 lg:px-28'>
       <div className='flex justify-between items-center'>
-        <Link href='/'>
-            <Image src={assets.logo} width={180} alt='' className='w-[130] sm:w-auto'/>
-        </Link>
-        <button className='flex items-center gap-2 font-medium py-1 px-3 sm:py-3 sm:px-6 border border-black shadow-[-7px_7px_0px_#000000]'>
-            Get Started <Image src={assets.arrow} alt='' />
-        </button>
-      </div>
-      <div className='text-center my-24'>
-        <h1 className='text-2xl sm:text-5xl font-semibold max-w-[700px] mx-auto'>{data.title}</h1>
-        <Image className='mx-auto mt-6 border border-white rounded-full' src={data.author_img} width={60} height={60} alt='' /> 
-        <p className='mt-1 pb-2 text-lg max-w-[740px] mx-auto'>{data.author}</p>
-      </div>
-    </div>
-    <div className='border border-white mx-5 max-w-[800px] md:mx-auto mt-[-100px] mb-10'>
-        <Image src={data.image} width={1280} height={720} alt='' />
-        <h1 className='my-8 text-[26px] font-semibold'>Introduction:</h1>
-        <p>{data.description}</p>
-        <h3 className='my-5 text-[18px] font-semibold'>Step 1: Self-Reflection and Goal Setting</h3>
-        <p className='my-3'>Lorem ipsum dolor sit, amet consectetur adipisicing elit. Consequatur sint maxime nobis perferendis illum vero, numquam suscipit cum, doloremque vitae, quaerat ipsum ea vel quos cupiditate iste nesciunt dolor omnis.</p>
-        <div className='my-24'>
-            <p className='text-black font-semibold my-4'>Share this article on social media</p>
-            <div className='flex'>
-                <Image src={assets.facebook_icon} width={50} alt=''/>
-                <Image src={assets.twitter_icon} width={50} alt=''/>
-                <Image src={assets.googleplus_icon} width={50} alt=''/>
-            </div>
+        <Image src={assets.logo} width={180} alt='' className='w-[130px] sm:w-auto' />
         </div>
-    </div>
-    <Footer/>
-    </>:<></>
-  )
-}
+        </div>
+      <div className='max-w-[800px] mx-auto py-8'>
+        <div className='bg-white border border-black hover:shadow-[-7px_7px_0px_#000000]'>
+          <Link href={`/blogs/${params.id}`}>
+            <Image src={data.image} alt='' width={1280} height={720} className='border-b border-black' />
+          </Link>
+          <div className='p-5'>
+            <p className="ml-5 mt-5 px-1 inline-block bg-black text-white text-sm">{data.category}</p>
+            <h1 className="mb-2 text-3xl font-medium tracking-tight text-gray-900">{data.title}</h1>
+            <div className="flex items-center mt-3">
+              <Image src={data.author_img} width={60} height={60} alt={data.author} className="rounded-full" />
+              <p className="ml-3 text-sm text-gray-700">{data.author}</p>
+            </div>
+            <p className="mt-4 text-lg text-gray-800">{data.description}</p>
+            <div className="my-6">
+              <p className='text-black font-semibold my-4'>Share this article on social media</p>
+              <div className='flex'>
+                <Image src={assets.facebook_icon} width={50} alt='' />
+                <Image src={assets.twitter_icon} width={50} alt='' />
+                <Image src={assets.googleplus_icon} width={50} alt='' />
+              </div>
+            </div>
+            <Link href={`/blogs`} className="inline-flex items-center py-2 font-semibold text-center">
+              Back to Blogs <Image src={assets.arrow} className="ml-2" alt='' width={12} />
+            </Link>
+          </div>
+        </div>
+      </div>
 
-export default page
+      <Footer />
+    </>
+  ) : (
+    <p className="text-center mt-10">No blog found</p>
+  );
+};
+
+export default BlogPage;

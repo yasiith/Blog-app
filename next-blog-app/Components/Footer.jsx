@@ -1,3 +1,4 @@
+//next-blog-app\Components\Footer.jsx
 import Image from 'next/image'
 import React from 'react'
 import { assets } from '@/Assets/assets'
