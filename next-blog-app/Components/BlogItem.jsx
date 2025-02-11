@@ -1,4 +1,4 @@
-
+//next-blog-app\Components\BlogItem.jsx
 import Image from "next/image"
 import { blog_data,assets } from '@/Assets/assets'
 import Link from 'next/link'
