@@ -27,7 +27,7 @@ export const createBlog = async (req, res) => {
 
 export const getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find({ user: req.user.userId });
+    const blogs = await Blog.find({ author: req.user.userId });
     res.json({ blogs });
   } catch (err) {
     console.error('Error:', err);
