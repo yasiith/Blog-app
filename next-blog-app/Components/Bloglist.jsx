@@ -1,27 +1,63 @@
-//next-blog-app\Components\Bloglist.jsx
-import { blog_data } from '@/Assets/assets'
-import React, {useState} from 'react'
-import BlogItem from  './BlogItem'
-
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
+import BlogItem from './BlogItem';
 
 const Bloglist = () => {
-    const [menu, setMenu] = useState('All');
+  const [menu, setMenu] = useState('All');
+  const [blogs, setBlogs] = useState([]);
+  
+  useEffect(() => {
+    const fetchBlogs = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/blogs/Allblogs');
+        if (res.ok) {
+          const data = await res.json();
+          setBlogs(data.blogs);
+        } else {
+          console.error('Failed to fetch blogs');
+        }
+      } catch (error) {
+        console.error('Error fetching blogs:', error);
+      }
+    };
+
+    fetchBlogs();
+  }, []); // Removed `router` from dependencies since it's not used inside `fetchBlogs`
 
   return (
     <div>
+      {/* Category Buttons */}
       <div className='flex justify-center gap-6 my-10'>
-        <button onClick={()=>setMenu('All')} className={menu==="All"? 'bg-black text-white py-1 px-4 rounded-sm':""}>All</button>
-        <button onClick={()=>setMenu('Technology')} className={menu==="Technology"? 'bg-black text-white py-1 px-4 rounded-sm':""}>Technology</button>
-        <button onClick={()=>setMenu('Startup')} className={menu==="Startup"? 'bg-black text-white py-1 px-4 rounded-sm':""}>Startup</button>
-        <button onClick={()=>setMenu('Lifestyle')} className={menu==="Lifestyle"? 'bg-black text-white py-1 px-4 rounded-sm':""}>Lifestyle</button>
+        {['All', 'Technology', 'Startup', 'Lifestyle'].map((category) => (
+          <button
+            key={category}
+            onClick={() => setMenu(category)}
+            className={`py-1 px-4 rounded-sm ${
+              menu === category ? 'bg-black text-white' : 'bg-gray-200'
+            }`}
+          >
+            {category}
+          </button>
+        ))}
       </div>
+
+      {/* Blog List */}
       <div className='flex flex-wrap justify-around gap-1 gap-y-10 mb-16 xl:mx-24'>
-        {blog_data.filter((item)=> menu==="All"?true: item.category===menu).map((item,index)=>{
-            return <BlogItem key={index} id={item.id} image={item.image} title={item.title} description={item.description} category={item.category}/>
-        })}
+        {blogs
+          .filter((item) => menu === 'All' || item.category === menu)
+          .map((item) => (
+            <BlogItem
+              key={item.id} // Use unique ID instead of index
+              id={item._id}
+              image={item.image}
+              title={item.title}
+              description={item.description}
+              category={item.category}
+            />
+          ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Bloglist
+export default Bloglist;
