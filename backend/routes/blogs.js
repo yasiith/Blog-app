@@ -1,5 +1,5 @@
 import express from 'express';
-import { createBlog,getAllBlogs,Getblog } from '../controllers/blogController.js';
+import { createBlog,getAllBlogs,Getblog,GetEveryBlogs } from '../controllers/blogController.js';
 import upload from '../lib/cloudinary.js';  // Ensure correct import
 import { verifyToken } from '../Middleware/verifyToken.js';
 
@@ -9,6 +9,8 @@ const router = express.Router();
 
 // Get all blogs by user
 router.get('/', verifyToken, getAllBlogs);
+
+router.get('/Allblogs',GetEveryBlogs)
 
 // Create a new blog
 router.post('/create',  createBlog);

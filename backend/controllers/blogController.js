@@ -35,6 +35,16 @@ export const getAllBlogs = async (req, res) => {
   }
 };
 
+export const GetEveryBlogs = async(req,res) => {
+  try {
+    const blogs = await Blog.find();
+    res.json({ blogs });
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 //  Corrected GetBlog function (was missing export)
 export const Getblog = async (req, res) => {
   try {
