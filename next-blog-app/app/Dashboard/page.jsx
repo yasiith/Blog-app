@@ -13,20 +13,25 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchBlogs = async () => {
       const token = localStorage.getItem('token');
+
       if (!token) {
         router.push('/'); // Redirect to login if no token
         return;
       }
 
-      const res = await fetch('http://localhost:5000/api/blogs', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      try {
+        const res = await fetch('http://localhost:5000/api/blogs', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      if (res.ok) {
-        const data = await res.json();
-        setBlogs(data.blogs);
-      } else {
-        alert('Failed to fetch blogs');
+        if (res.ok) {
+          const data = await res.json();
+          setBlogs(data.blogs);
+        } else {
+          console.error('Failed to fetch blogs');
+        }
+      } catch (error) {
+        console.error('Error fetching blogs:', error);
       }
     };
 
@@ -47,8 +52,9 @@ export default function Dashboard() {
             <Image
               src={assets.logo}
               width={180}
-              alt=''
-              className='w-[130] sm:w-auto'
+              height={50}
+              alt='Logo'
+              className='sm:w-auto'
             />
           </Link>
           <div className='flex gap-4'>
@@ -72,15 +78,29 @@ export default function Dashboard() {
       <div className='flex-grow p-6 md:px-12 lg:px-28'>
         <h2 className='text-2xl font-bold mb-4'>My Blogs</h2>
 
-        <div className='mt-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
           {blogs.length === 0 ? (
             <p>No blogs found.</p>
           ) : (
             blogs.map((blog) => (
-              <div key={blog._id} className='border p-4 rounded mb-2'>
-                <h3 className='text-xl font-semibold'>{blog.title}</h3>
-                <p>{blog.content}</p>
-              </div>
+              <Link
+                key={blog._id}
+                href={`/blogs/${blog._id}`}
+                className='block border rounded-lg shadow-lg overflow-hidden transition transform hover:scale-105'
+              >
+                <div className='relative w-full h-48'>
+                  <Image
+                    src={blog.image || '/default-blog.jpg'} // Fallback image
+                    alt={blog.title}
+                    layout='fill'
+                    objectFit='cover'
+                  />
+                </div>
+                <div className='p-4'>
+                  <h3 className='text-lg font-bold'>{blog.title}</h3>
+                  <p className='text-sm text-gray-600'>{blog.category || 'Uncategorized'}</p>
+                </div>
+              </Link>
             ))
           )}
         </div>
