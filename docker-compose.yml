@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - database
+    command: ["npm", "run", "start"]
+
+  frontend:
+    build: ./next-blog-app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./next-blog-app:/app
+    command: ["npm", "run", "dev"]
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
+    
+    depends_on:
+      - backend
+
+  database:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
