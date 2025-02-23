@@ -65,9 +65,10 @@ const BlogPage = ({ params }) => {
                 <Image src={assets.googleplus_icon} width={50} alt='' />
               </div>
             </div>
-            <Link href={`/blogs`} className="inline-flex items-center py-2 font-semibold text-center">
-              Back to Blogs <Image src={assets.arrow} className="ml-2" alt='' width={12} />
-            </Link>
+            <button onClick={() => router.push('/blogs')} className="inline-flex items-center py-2 font-semibold text-center">
+  Back to Blogs <Image src={assets.arrow} className="ml-2" alt='' width={12} />
+</button>
+
           </div>
         </div>
       </div>
