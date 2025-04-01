@@ -1,7 +1,7 @@
 import express from 'express';
 import { createBlog,getAllBlogs,Getblog,GetEveryBlogs } from '../controllers/blogController.js';
 import upload from '../lib/cloudinary.js';  // Ensure correct import
-import { verifyToken } from '../Middleware/verifyToken.js';
+import  {verifyToken}  from '../middleware/verifyToken.js';
 
 
 const router = express.Router();

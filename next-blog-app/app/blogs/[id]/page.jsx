@@ -13,10 +13,12 @@ const BlogPage = ({ params }) => {
   const [error, setError] = useState('');
   const router = useRouter();
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   useEffect(() => {
     const fetchBlogData = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/blogs/${params.id}`);
+        const response = await fetch(`${API_URL}/api/blogs/${params.id}`);
 
         if (!response.ok) {
           throw new Error('Blog not found');

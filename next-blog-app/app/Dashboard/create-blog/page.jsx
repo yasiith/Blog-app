@@ -81,6 +81,7 @@ export default function CreateBlog() {
       }
   
       const imageUrl = cloudinaryResponseData.secure_url;
+      const API_URL = process.env.REACT_APP_API_URL;
   
       // Send blog data with image URL to your backend
       const blogData = {
@@ -91,7 +92,7 @@ export default function CreateBlog() {
         author: userId,
       };
   
-      const res = await fetch('http://localhost:5000/api/blogs/create', {
+      const res = await fetch('${API_URL}/api/blogs/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

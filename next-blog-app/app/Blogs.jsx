@@ -3,13 +3,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function Blogs() {
   const [blogs, setBlogs] = useState([]);
 
   useEffect(() => {
     const fetchBlogs = async () => {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/blogs', {
+      const res = await fetch('${API_URL}/api/blogs', {
         method: 'GET',
         headers: { 
           'Content-Type': 'application/json', 

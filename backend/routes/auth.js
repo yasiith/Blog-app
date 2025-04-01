@@ -10,7 +10,7 @@ const router = express.Router();
 
 // Registration route
 router.post('/register', async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, email, password,} = req.body;
 
   // Check if all fields are provided
   if (!username || !email || !password) {
@@ -78,3 +78,4 @@ router.post('/login', async (req, res) => {
 
 // Export the router
 export default router;
+

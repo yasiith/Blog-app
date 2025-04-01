@@ -8,6 +8,9 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false); // Add loading state here
   const [error, setError] = useState(''); // Optionally add an error state for better feedback
+
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const router = useRouter();
 
   const handleSubmit = async (e) => {
@@ -23,7 +26,7 @@ export default function Register() {
     setLoading(true); // Set loading to true when starting the request
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/register', {
+      const res = await fetch('${API_URL}/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
