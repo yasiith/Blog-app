@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { assets } from '@/Assets/assets';
 import Footer from '@/Components/Footer';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 export default function Dashboard() {
   const [blogs, setBlogs] = useState([]);
   const router = useRouter();
@@ -20,7 +22,7 @@ export default function Dashboard() {
       }
 
       try {
-        const res = await fetch('http://localhost:5000/api/blogs', {
+        const res = await fetch('${API_URL}/api/blogs', {
           headers: { Authorization: `Bearer ${token}` },
         });
 

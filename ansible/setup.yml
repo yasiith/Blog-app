@@ -1,0 +1,47 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Update system packages
+      yum:
+        name: '*'
+        state: latest
+
+    - name: Install dependencies
+      yum:
+        name:
+          - yum-utils
+          - device-mapper-persistent-data
+          - lvm2
+        state: present
+
+    - name: Add Docker repository
+      shell: |
+        sudo amazon-linux-extras enable docker
+        sudo yum install -y docker
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add EC2 user to Docker group (optional, if using non-root user)
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Pull the Docker images
+      command: |
+        docker pull sahanmihikalpa/blogapp:frontend
+        docker pull sahanmihikalpa/blogapp:backend
+        docker pull sahanmihikalpa/blogapp:mongo
+
+    - name: Run MongoDB container
+      command: docker run -d --name mongo_container -p 27017:27017 sahanmihikalpa/blogapp:mongo
+
+    - name: Run Backend container
+      command: docker run -d --name backend_container -p 5000:5000 --link mongo_container:mongo sahanmihikalpa/blogapp:backend
+
+    - name: Run Frontend container
+      command: docker run -d --name frontend_container -p 80:80 --link backend_container:backend sahanmihikalpa/blogapp:frontend

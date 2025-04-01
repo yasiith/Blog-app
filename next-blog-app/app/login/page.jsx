@@ -2,6 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+const API_URL = process.env.REACT_APP_API_URL;
+
 
 
 export default function Login() {
@@ -12,7 +14,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const res = await fetch('http://localhost:5000/api/auth/login', {  // Corrected URL
+    const res = await fetch('${API_URL}/api/auth/login', {  // Corrected URL
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
