@@ -2,11 +2,12 @@ pipeline {
     agent any
 
     stages {
-        stage('Checkout Code') {
+        stage('Clone Repository') {
             steps {
-                git 'https://github.com/yasiith/Blog-app.git'  // Checkout the code from GitHub
+                git 'https://github.com/yasiith/Blog-app.git'
             }
         }
 
+        
     }
 }
