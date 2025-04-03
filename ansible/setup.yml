@@ -1,58 +1,48 @@
-- hosts: all
+---
+- name: Setup and Run Docker Containers
+  hosts: all
   become: yes
-  vars:
-    docker_compose_version: "2.22.0"
+
   tasks:
-    - name: Update system packages
+    - name: Update all packages
       yum:
-        name: "*"
+        name: '*'
         state: latest
 
-    - name: Install dependencies
+    - name: Install Docker
       yum:
-        name:
-          - yum-utils
-          - device-mapper-persistent-data
-          - lvm2
+        name: docker
         state: present
 
-    - name: Add Docker repository
-      shell: |
-        sudo amazon-linux-extras enable docker
-        sudo yum install -y docker
-
     - name: Start and enable Docker service
-      service:
+      systemd:
         name: docker
         state: started
         enabled: yes
 
-    - name: Add EC2 user to Docker group
+    - name: Add ec2-user to docker group
       user:
         name: ec2-user
         groups: docker
         append: yes
 
-    - name: Install Docker Compose
-      get_url:
-        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-x86_64"
-        dest: "/usr/local/bin/docker-compose"
-        mode: "u+x"
-
-    - name: Create docker-compose.yml on remote server
-      copy:
-        src: docker-compose.prod.yml
-        dest: /home/ec2-user/docker-compose.yml
-        mode: "0644"
-        owner: ec2-user
-        group: ec2-user
-
-    - name: Login to Docker Hub
-      shell: "docker login -u {{ lookup('env', 'DOCKER_USER') }} -p {{ lookup('env', 'DOCKER_PASS') }}"
-      no_log: true
-
     - name: Pull Docker images
-      shell: "cd /home/ec2-user && DOCKER_USER={{ lookup('env', 'DOCKER_USER') }} SERVER_IP={{ inventory_hostname }} docker-compose pull"
+      command: docker pull {{ item }}
+      with_items:
+        - "yasiith/blogapp:frontend" 
+        - "yasiith/blogapp:backend" 
 
-    - name: Run Docker containers
-      shell: "cd /home/ec2-user && DOCKER_USER={{ lookup('env', 'DOCKER_USER') }} SERVER_IP={{ inventory_hostname }} docker-compose up -d"
+
+    - name: Create Docker network if not exists
+      command: docker network ls | grep mynetwork || docker network create mynetwork
+
+    - name: Run backend container
+      command: >
+        docker run -d --name backend_container --network mynetwork
+        -e MONGODB_URI="mongodb+srv://SahanM:Sahan2001@blogger.3xdjq.mongodb.net/?retryWrites=true&w=majority&appname=blogger"
+        -p 5000:5000 yasiith/blogapp:backend 
+
+    - name: Run frontend container
+      command: >
+        docker run -d --name frontend_container --network mynetwork
+        -p 80:3000 yasiith/blogapp:frontend
