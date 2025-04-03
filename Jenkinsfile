@@ -28,15 +28,14 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
-
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         // Login to Docker Hub securely
                         bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
                         
-                        // Push the images to Docker Hub
-                        bat 'docker-compose -f docker-compose.yml push'
+                        // Build and push the images to Docker Hub with environment variable
+                        bat "docker-compose -f docker-compose.yml build"
+                        bat "set DOCKER_USER=%DOCKER_USER% && docker-compose -f docker-compose.yml push"
                     }
-
                 }
             }
         }
@@ -93,11 +92,13 @@ pipeline {
         stage('Pull Docker Images and Run Containers') {
             steps {
                 script {
-                    // Pull Docker images from Docker Hub to the deployment environment
-                    bat 'docker-compose -f docker-compose.yml pull'
+                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        // Pull Docker images from Docker Hub to the deployment environment
+                        bat "set DOCKER_USER=%DOCKER_USER% && docker-compose -f docker-compose.yml pull"
 
-                    // Run the containers using the pulled images
-                    bat 'docker-compose -f docker-compose.yml up -d'  // Use -d for detached mode
+                        // Run the containers using the pulled images
+                        bat "set DOCKER_USER=%DOCKER_USER% && docker-compose -f docker-compose.yml up -d"  // Use -d for detached mode
+                    }
                 }
             }
         }
