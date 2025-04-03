@@ -42,6 +42,11 @@ pipeline {
                     dir('terraform') {
                         bat 'terraform init'
                         bat 'terraform apply -auto-approve'
+                        
+                        // Capture the IP address from terraform output
+                        def server_ip = bat(script: 'terraform output -raw server_ip', returnStdout: true).trim()
+                        env.SERVER_IP = server_ip
+                        echo "Set SERVER_IP to ${env.SERVER_IP}"
                     }
                 }
             }
@@ -56,12 +61,15 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
-                        // Create a new inventory file directly instead of using sed
+                        // Create a new inventory file with the correct IP
                         bat 'powershell -Command "wsl -d Ubuntu -- echo \\"[web]\\" > inventory.ini"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"16.171.196.13 ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\" >> inventory.ini"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- echo \\\"${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
                         
+                        // Wait for SSH to become available (EC2 instances take time to initialize)
+                        bat 'powershell -Command "Start-Sleep -s 30"'
+
                         // Test SSH connectivity with the new key location
-                        bat 'powershell -Command "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@16.171.196.13 echo Connection successful"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${env.SERVER_IP} echo Connection successful\""
                         
                         // Then run ansible with the updated inventory
                         bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv"'
