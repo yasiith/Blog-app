@@ -18,7 +18,7 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    bat "set DOCKER_USER=${DOCKER_CREDS_USR}&& docker-compose -f docker-compose.yml build"
+                    sh "export DOCKER_USER=${DOCKER_CREDS_USR} && docker-compose -f docker-compose.yml build"
                 }
             }
         }
@@ -26,8 +26,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
-                    bat "echo ${DOCKER_CREDS_PSW} | docker login -u ${DOCKER_CREDS_USR} --password-stdin"
-                    bat "set DOCKER_USER=${DOCKER_CREDS_USR}&& docker-compose -f docker-compose.yml push"
+                    sh "echo ${DOCKER_CREDS_PSW} | docker login -u ${DOCKER_CREDS_USR} --password-stdin"
+                    sh "export DOCKER_USER=${DOCKER_CREDS_USR} && docker-compose -f docker-compose.yml push"
                 }
             }
         }
@@ -36,11 +36,11 @@ pipeline {
             steps {
                 script {
                     dir('terraform') {
-                        bat 'terraform init'
-                        bat 'terraform plan -out=tfplan'
-                        bat 'terraform apply -auto-approve'
+                        sh 'terraform init'
+                        sh 'terraform plan -out=tfplan'
+                        sh 'terraform apply -auto-approve'
                         
-                        def output = bat(script: 'terraform output -raw server_ip', returnStdout: true).trim()
+                        def output = sh(script: 'terraform output -raw server_ip', returnStdout: true).trim()
                         def server_ip = output.readLines().last()
                         env.SERVER_IP = server_ip
                         echo "Set SERVER_IP to ${env.SERVER_IP}"
@@ -54,47 +54,47 @@ pipeline {
                 script {
                     dir('ansible') {
                         // Set environment variables for Ansible
-                        bat "set SERVER_IP=${env.SERVER_IP}&& set DOCKER_USER=${DOCKER_CREDS_USR}&& set DOCKER_PASS=${DOCKER_CREDS_PSW}"
+                        sh "export SERVER_IP=${env.SERVER_IP} && export DOCKER_USER=${DOCKER_CREDS_USR} && export DOCKER_PASS=${DOCKER_CREDS_PSW}"
                         
                         // Copy key to WSL's own filesystem for proper permissions
-                        bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
+                        sh 'wsl -d Ubuntu -- mkdir -p ~/ansible-keys'
+                        sh 'wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/'
+                        sh 'wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem'
                         
                         // Create inventory file
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"[web]\" > inventory.ini\'"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\" >> inventory.ini'\""
-                        
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"[web]\\" > inventory.ini"'
+                        sh "wsl -d Ubuntu -- bash -c 'echo \\"${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\" >> inventory.ini'"
+
                         // Print inventory file for debugging
-                        bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
+                        sh 'wsl -d Ubuntu -- cat inventory.ini'
                         
-                        // Create a simpler wait-for-ssh script file with line-by-line commands to avoid escaping issues
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"#!/bin/bash\" > wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"MAX_ATTEMPTS=30\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"COUNTER=0\" >> wait-for-ssh.sh\'"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"echo \\\"Waiting for SSH connection to ${env.SERVER_IP}...\\\"\" >> wait-for-ssh.sh'\""
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"while [ \\$COUNTER -lt \\$MAX_ATTEMPTS ]; do\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  COUNTER=\\$((COUNTER+1))\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  echo \\\"Attempt \\$COUNTER of \\$MAX_ATTEMPTS\\\"\" >> wait-for-ssh.sh\'"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@${env.SERVER_IP} exit 2>/dev/null\" >> wait-for-ssh.sh'\""
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  if [ \\$? -eq 0 ]; then\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"    echo \\\"SSH connection successful!\\\"\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"    exit 0\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  fi\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  echo \\\"Waiting 5 seconds before next attempt...\\\"\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  sleep 5\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"done\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"echo \\\"Failed to establish SSH connection after \\$MAX_ATTEMPTS attempts\\\"\" >> wait-for-ssh.sh\'"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"exit 1\" >> wait-for-ssh.sh\'"'
+                        // Create a simpler wait-for-ssh script file
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"#!/bin/bash\\" > wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"MAX_ATTEMPTS=30\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"COUNTER=0\\" >> wait-for-ssh.sh"'
+                        sh "wsl -d Ubuntu -- bash -c 'echo \\"echo \\\\\\"Waiting for SSH connection to ${env.SERVER_IP}...\\\\\\"\" >> wait-for-ssh.sh'"
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"while [ \\\\$COUNTER -lt \\\\$MAX_ATTEMPTS ]; do\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"  COUNTER=\\\\$((COUNTER+1))\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"  echo \\\\\\"Attempt \\\\\$COUNTER of \\\\\$MAX_ATTEMPTS\\\\\\"\" >> wait-for-ssh.sh"'
+                        sh "wsl -d Ubuntu -- bash -c 'echo \\"  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@${env.SERVER_IP} exit 2>/dev/null\\" >> wait-for-ssh.sh'"
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"  if [ \\\\$? -eq 0 ]; then\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"    echo \\\\\\"SSH connection successful!\\\\\\"\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"    exit 0\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"  fi\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"  echo \\\\\\"Waiting 5 seconds before next attempt...\\\\\\"\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"  sleep 5\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"done\\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"echo \\\\\\"Failed to establish SSH connection after \\\$MAX_ATTEMPTS attempts\\\\\\"\" >> wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- bash -c "echo \\"exit 1\\" >> wait-for-ssh.sh"'
                         
                         // Make the script executable
-                        bat 'powershell -Command "wsl -d Ubuntu -- chmod +x wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- chmod +x wait-for-ssh.sh'
                         
                         // Run the script to wait for SSH
-                        bat 'powershell -Command "wsl -d Ubuntu -- ./wait-for-ssh.sh"'
+                        sh 'wsl -d Ubuntu -- ./wait-for-ssh.sh'
                         
                         // Run ansible with environment variables passed through
-                        bat "powershell -Command \"wsl -d Ubuntu -- DOCKER_USER=${DOCKER_CREDS_USR} DOCKER_PASS=${DOCKER_CREDS_PSW} ansible-playbook -i inventory.ini setup.yml -e 'server_ip=${env.SERVER_IP}' -vvv\""
+                        sh "wsl -d Ubuntu -- DOCKER_USER=${DOCKER_CREDS_USR} DOCKER_PASS=${DOCKER_CREDS_PSW} ansible-playbook -i inventory.ini setup.yml -e 'server_ip=${env.SERVER_IP}' -vvv"
                     }
                 }
             }
@@ -105,16 +105,16 @@ pipeline {
                 script {
                     dir('ansible') {
                         // Copy docker-compose.yml to remote server
-                        bat "powershell -Command \"wsl -d Ubuntu -- scp -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ../docker-compose.yml ec2-user@${env.SERVER_IP}:/home/ec2-user/\""
-                        
+                        sh "wsl -d Ubuntu -- scp -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ../docker-compose.yml ec2-user@${env.SERVER_IP}:/home/ec2-user/"
+
                         // Install Docker Compose if not already installed
-                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo yum install -y docker && sudo systemctl start docker && sudo systemctl enable docker && sudo curl -L \\\"https://github.com/docker/compose/releases/download/v2.22.0/docker-compose-linux-x86_64\\\" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose'\""
-                        
+                        sh "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo yum install -y docker && sudo systemctl start docker && sudo systemctl enable docker && sudo curl -L \\\"https://github.com/docker/compose/releases/download/v2.22.0/docker-compose-linux-x86_64\\\" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose'"
+
                         // Deploy containers using the installed Docker Compose
-                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'cd /home/ec2-user && sudo DOCKER_USER=${DOCKER_CREDS_USR} SERVER_IP=${env.SERVER_IP} /usr/local/bin/docker-compose -f docker-compose.yml pull && sudo DOCKER_USER=${DOCKER_CREDS_USR} SERVER_IP=${env.SERVER_IP} /usr/local/bin/docker-compose -f docker-compose.yml up -d'\""
-                        
+                        sh "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'cd /home/ec2-user && sudo DOCKER_USER=${DOCKER_CREDS_USR} SERVER_IP=${env.SERVER_IP} /usr/local/bin/docker-compose -f docker-compose.yml pull && sudo DOCKER_USER=${DOCKER_CREDS_USR} SERVER_IP=${env.SERVER_IP} /usr/local/bin/docker-compose -f docker-compose.yml up -d'"
+
                         // Verify deployment
-                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo docker ps'\""
+                        sh "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo docker ps'"
                     }
                 }
             }
