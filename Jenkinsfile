@@ -58,61 +58,44 @@ pipeline {
         stage('Ansible Deployment') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        dir('ansible') {  // Navigate to ansible directory
-                            // Copy key to WSL's own filesystem for proper permissions
-                            bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
-                            bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
-                            bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
-                            
-                            // Create inventory file without BOM using a temporary file and cat
-                            bat 'powershell -Command "wsl -d Ubuntu -- rm -f inventory.ini temp_inventory.txt"'
-                            bat 'powershell -Command "wsl -d Ubuntu -- echo [web] > temp_inventory.txt"'
-                            bat "powershell -Command \"wsl -d Ubuntu -- echo ${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3 >> temp_inventory.txt\""
-                            bat 'powershell -Command "wsl -d Ubuntu -- cat temp_inventory.txt > inventory.ini"'
-                            bat 'powershell -Command "wsl -d Ubuntu -- rm temp_inventory.txt"'
-                            
-                            // Wait for SSH to become available (EC2 instances take time to initialize)
-                            bat 'powershell -Command "Start-Sleep -s 60"' // 60 seconds wait time
-                            
-                            // Display the inventory file for debugging
-                            bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
+                    dir('ansible') {  // Navigate to ansible directory
+                        // Copy key to WSL's own filesystem for proper permissions
+                        bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
+                        
+                        // Create a new inventory file with the correct IP - fixing UTF-8 BOM issue
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo -n \"[web]\" > inventory.ini"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- echo -n \\\"\\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
+                        
+                        // Wait for SSH to become available (EC2 instances take time to initialize)
+                        bat 'powershell -Command "Start-Sleep -s 60"' // Increased to 60 seconds
+                        
+                        // Display the inventory file for debugging
+                        bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
 
-                            // Test SSH connectivity with the new key location
-                            bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${env.SERVER_IP} echo Connection successful\""
-                            
-                            // Create a variables file to pass Docker credentials to Ansible
-                            bat 'powershell -Command "wsl -d Ubuntu -- rm -f ansible_vars.yml"'
-                            bat "powershell -Command \"wsl -d Ubuntu -- echo docker_user: ${DOCKER_USER} > ansible_vars.yml\""
-                            bat "powershell -Command \"wsl -d Ubuntu -- echo docker_password: ${DOCKER_PASS} >> ansible_vars.yml\""
-                            
-                            // Run Ansible with variable file
-                            bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -e @ansible_vars.yml -vvv"'
-                            
-                            // Clean up the variables file for security
-                            bat 'powershell -Command "wsl -d Ubuntu -- rm -f ansible_vars.yml"'
-                        }
+                        // Test SSH connectivity with the new key location
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${env.SERVER_IP} echo Connection successful\""
+                        
+                        // Then run ansible with the updated inventory - using -e to pass parameters
+                        bat "powershell -Command \"wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv\""
                     }
                 }
             }
         }
 
-        stage('Final Verification') {
+        stage('Pull Docker Images and Run Containers') {
             steps {
                 script {
-                    echo "Deployment completed. Application should be running at http://${env.SERVER_IP}/"
-                    echo "Please wait a few minutes for all services to initialize properly."
+                    // Pull Docker images from Docker Hub to the deployment environment
+                    bat 'docker-compose -f docker-compose.yml pull'
+
+                    // Run the containers using the pulled images
+                    bat 'docker-compose -f docker-compose.yml up -d'  // Use -d for detached mode
                 }
             }
         }
-    }
-    
-    post {
-        success {
-            echo "Pipeline executed successfully! The blog application is now available at http://${env.SERVER_IP}/"
-        }
-        failure {
-            echo "Pipeline failed. Please check the logs for more information."
-        }
+        
+        
     }
 }
