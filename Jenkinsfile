@@ -52,7 +52,7 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {  // Navigate to ansible directory
-                        bat 'wsl ansible-playbook -i inventory.ini ansible-playbook.yml'
+                        bat 'powershell -Command "wsl ansible-playbook -i inventory.ini ansible-playbook.yml"'
                     }
                 }
             }
