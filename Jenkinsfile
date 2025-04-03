@@ -68,8 +68,9 @@ pipeline {
                         // Print inventory file for debugging
                         bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
                         
-                        // Wait for SSH to become available
-                        bat 'powershell -Command "Start-Sleep -s 60"'
+                        // Wait for SSH to become available - use polling instead of fixed sleep
+                        echo "Waiting for EC2 instance to become available..."
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'#!/bin/bash\nfor i in $(seq 1 30); do\n  echo \"Attempt $i: Checking SSH connection...\"\n  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@$SERVER_IP exit 2>/dev/null\n  if [ $? -eq 0 ]; then\n    echo \"SSH connection successful!\"\n    break\n  fi\n  echo \"Waiting 5 seconds before next attempt...\"\n  sleep 5\ndone\'\""'
                         
                         // Run ansible with environment variables passed through
                         bat "powershell -Command \"wsl -d Ubuntu -- DOCKER_USER=${DOCKER_CREDS_USR} DOCKER_PASS=${DOCKER_CREDS_PSW} ansible-playbook -i inventory.ini setup.yml -e 'server_ip=${env.SERVER_IP}' -vvv\""
