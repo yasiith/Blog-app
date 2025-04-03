@@ -1,10 +1,11 @@
+
 version: '3.8'
 
 services:
   backend:
+
     build: ./backend
     working_dir: /app
-    image: ${DOCKER_USER}/blogapp:backend
     ports:
       - "5000:5000"
     volumes:
@@ -19,7 +20,6 @@ services:
   frontend:
     build: ./next-blog-app
     working_dir: /app
-    image: ${DOCKER_USER}/blogapp:frontend
     ports:
       - "3000:3000"
     volumes:
@@ -27,6 +27,7 @@ services:
     command: ["npm", "run", "dev"]
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
+    
     depends_on:
       - backend
     restart: unless-stopped
