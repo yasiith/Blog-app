@@ -1,4 +1,5 @@
 resource "aws_instance" "web" {
+  instance_id = "i-026687cddb29a8408"
   ami           = "ami-03f71e078efdce2c9"  # Amazon Linux 2 in us-east-1
   instance_type = "t3.micro"
   key_name      = "SahanDevKeyPair"
