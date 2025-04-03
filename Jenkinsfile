@@ -14,6 +14,15 @@ pipeline {
             }
         }
 
+        stage('Debug Environment') {
+            steps {
+                bat "dir"
+                bat "dir backend"
+                bat "dir next-blog-app"
+                bat "type docker-compose.yml"
+            }
+        }
+
         stage('Build and Push Docker Images') {
             steps {
                 script {
@@ -21,10 +30,13 @@ pipeline {
                         // Login to Docker Hub securely
                         bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
                         
-                        // Build and tag with environment variables
-                        bat "docker-compose -f docker-compose.yml build --build-arg DOCKER_USER=%DOCKER_USER%"
+                        // Build backend image
+                        bat "docker build -t %DOCKER_USER%/blogapp:backend ./backend"
                         
-                        // Push the images to Docker Hub (explicitly push each service)
+                        // Build frontend image
+                        bat "docker build -t %DOCKER_USER%/blogapp:frontend ./next-blog-app"
+                        
+                        // Push the images to Docker Hub
                         bat "docker push %DOCKER_USER%/blogapp:backend"
                         bat "docker push %DOCKER_USER%/blogapp:frontend"
                         
