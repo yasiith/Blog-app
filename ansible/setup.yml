@@ -2,6 +2,9 @@
 - name: Setup and Run Docker Containers
   hosts: all
   become: yes
+  vars:
+    docker_user: "{{ docker_user | default('yasiith') }}"
+    server_ip: "{{ server_ip | default('localhost') }}"
 
   tasks:
     - name: Update all packages

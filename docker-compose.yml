@@ -1,10 +1,13 @@
-
 version: '3.8'
 
 services:
-  backend:
+  app:
+    build: .
+    image: yasiith/blog-app:latest
 
+  backend:
     build: ./backend
+    image: ${DOCKER_USER:-yasiith}/blogapp:backend
     working_dir: /app
     ports:
       - "5000:5000"
@@ -19,6 +22,7 @@ services:
 
   frontend:
     build: ./next-blog-app
+    image: ${DOCKER_USER:-yasiith}/blogapp:frontend
     working_dir: /app
     ports:
       - "3000:3000"
@@ -27,7 +31,6 @@ services:
     command: ["npm", "run", "dev"]
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
-    
     depends_on:
       - backend
     restart: unless-stopped
