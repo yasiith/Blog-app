@@ -68,9 +68,14 @@ pipeline {
                         // Print inventory file for debugging
                         bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
                         
-                        // Wait for SSH to become available - use polling instead of fixed sleep
-                        echo "Waiting for EC2 instance to become available..."
-                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'#!/bin/bash\nfor i in $(seq 1 30); do\n  echo \"Attempt $i: Checking SSH connection...\"\n  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@$SERVER_IP exit 2>/dev/null\n  if [ $? -eq 0 ]; then\n    echo \"SSH connection successful!\"\n    break\n  fi\n  echo \"Waiting 5 seconds before next attempt...\"\n  sleep 5\ndone\'\""'
+                        // Create a separate wait-for-ssh script file
+                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'cat > wait-for-ssh.sh << EOF\\n#!/bin/bash\\nMAX_ATTEMPTS=30\\nCOUNTER=0\\necho \"Waiting for SSH connection to ${env.SERVER_IP}...\"\\nwhile [ \\$COUNTER -lt \\$MAX_ATTEMPTS ]; do\\n  COUNTER=\\$((COUNTER+1))\\n  echo \"Attempt \\$COUNTER of \\$MAX_ATTEMPTS\"\\n  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@${env.SERVER_IP} exit 2>/dev/null\\n  if [ \\$? -eq 0 ]; then\\n    echo \"SSH connection successful!\"\\n    exit 0\\n  fi\\n  echo \"Waiting 5 seconds before next attempt...\"\\n  sleep 5\\ndone\\necho \"Failed to establish SSH connection after \\$MAX_ATTEMPTS attempts\"\\nexit 1\\nEOF'\""
+                        
+                        // Make the script executable
+                        bat 'powershell -Command "wsl -d Ubuntu -- chmod +x wait-for-ssh.sh"'
+                        
+                        // Run the script to wait for SSH
+                        bat 'powershell -Command "wsl -d Ubuntu -- ./wait-for-ssh.sh"'
                         
                         // Run ansible with environment variables passed through
                         bat "powershell -Command \"wsl -d Ubuntu -- DOCKER_USER=${DOCKER_CREDS_USR} DOCKER_PASS=${DOCKER_CREDS_PSW} ansible-playbook -i inventory.ini setup.yml -e 'server_ip=${env.SERVER_IP}' -vvv\""
