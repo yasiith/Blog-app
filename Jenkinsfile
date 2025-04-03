@@ -41,10 +41,13 @@ pipeline {
                 script {
                     dir('terraform') {
                         bat 'terraform init'
+                        bat 'terraform plan -out=tfplan'
                         bat 'terraform apply -auto-approve'
                         
-                        // Capture the IP address from terraform output
-                        def server_ip = bat(script: 'terraform output -raw server_ip', returnStdout: true).trim()
+                        // Capture the IP address from terraform output - fixed
+                        def output = bat(script: 'terraform output -raw server_ip', returnStdout: true).trim()
+                        // Extract just the IP address from the output
+                        def server_ip = output.readLines().last()
                         env.SERVER_IP = server_ip
                         echo "Set SERVER_IP to ${env.SERVER_IP}"
                     }
@@ -61,15 +64,22 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
+                        // Get the server IP directly from Terraform
+                        def server_ip_cmd = bat(script: 'cd ../terraform && terraform output -raw server_ip', returnStdout: true).trim()
+                        def server_ip = server_ip_cmd.readLines().last()
+                        
                         // Create a new inventory file with the correct IP
                         bat 'powershell -Command "wsl -d Ubuntu -- echo \\"[web]\\" > inventory.ini"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- echo \\\"${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
+                        bat "powershell -Command \"wsl -d Ubuntu -- echo \\\"${server_ip} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
                         
                         // Wait for SSH to become available (EC2 instances take time to initialize)
-                        bat 'powershell -Command "Start-Sleep -s 30"'
+                        bat 'powershell -Command "Start-Sleep -s 60"' // Increased to 60 seconds
+                        
+                        // Display the inventory file for debugging
+                        bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
 
                         // Test SSH connectivity with the new key location
-                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${env.SERVER_IP} echo Connection successful\""
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${server_ip} echo Connection successful\""
                         
                         // Then run ansible with the updated inventory
                         bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv"'
@@ -82,6 +92,10 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {
+                        // Get the server IP directly from Terraform
+                        def server_ip_cmd = bat(script: 'cd ../terraform && terraform output -raw server_ip', returnStdout: true).trim()
+                        def server_ip = server_ip_cmd.readLines().last()
+                        
                         // Create a docker-compose.yml deployment playbook
                         bat 'powershell -Command "wsl -d Ubuntu -- cat > deploy.yml << \\"EOF\\""'
                         bat 'powershell -Command "wsl -d Ubuntu -- echo \\"---\\" >> deploy.yml"'
