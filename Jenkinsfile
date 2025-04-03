@@ -52,20 +52,8 @@ pipeline {
                 script {
                     dir('terraform') {
                         bat 'terraform init'
-                        
-                        // Check if state file exists and has the instance
-                        def instanceExists = bat(script: 'terraform state list aws_instance.web', returnStatus: true) == 0
-                        
-                        if (instanceExists) {
-                            echo "Instance exists, updating configuration..."
-                            // Only update configuration, don't replace instance
-                            bat 'terraform plan -out=tfplan -refresh-only'
-                        } else {
-                            echo "Creating new instance..."
-                            bat 'terraform plan -out=tfplan'
-                        }
-                        
-                        bat 'terraform apply -auto-approve tfplan'
+                        bat 'terraform plan -out=tfplan'
+                        bat 'terraform apply -auto-approve'
                         
                         def output = bat(script: 'terraform output -raw server_ip', returnStdout: true).trim()
                         def server_ip = output.readLines().last()
