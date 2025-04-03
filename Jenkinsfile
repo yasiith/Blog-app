@@ -6,6 +6,7 @@ pipeline {
         AWS_ACCESS_KEY_ID = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
         DOCKER_CREDS = credentials('docker-hub-token')
+        DOCKER_USER = "${DOCKER_CREDS_USR}"
     }
 
     stages {
@@ -18,7 +19,8 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    bat "set DOCKER_USER=${DOCKER_CREDS_USR} && docker-compose -f docker-compose.yml build"
+                    // Setting environment variable properly without spaces
+                    bat "set \"DOCKER_USER=${DOCKER_CREDS_USR}\" && docker-compose -f docker-compose.yml build"
                 }
             }
         }
@@ -27,7 +29,7 @@ pipeline {
             steps {
                 script {
                     bat "echo ${DOCKER_CREDS_PSW} | docker login -u ${DOCKER_CREDS_USR} --password-stdin"
-                    bat "set DOCKER_USER=${DOCKER_CREDS_USR} && docker-compose -f docker-compose.yml push"
+                    bat "set \"DOCKER_USER=${DOCKER_CREDS_USR}\" && docker-compose -f docker-compose.yml push"
                 }
             }
         }
