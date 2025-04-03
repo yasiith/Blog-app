@@ -16,11 +16,18 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./next-blog-app
+    build: ./next-blog-app
     image: ${DOCKER_USER:-yasiith}/blogapp:frontend
+    working_dir: /app
     ports:
       - "3000:3000"
+    volumes:
+      - ./next-blog-app:/app
+    command: ["npm", "run", "dev"]
+
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 
 
