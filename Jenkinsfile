@@ -67,22 +67,6 @@ pipeline {
         stage('Ansible Deployment') {
             steps {
                 script {
-<<<<<<< HEAD
-                    dir('ansible') {  // Navigate to ansible directory
-                        // Copy key to WSL's own filesystem for proper permissions
-                        bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
-                        
-                        // Create a new inventory file with the correct IP - fixing UTF-8 BOM issue
-                        wsl -d Ubuntu -- printf "[web]\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\n" > inventory.ini
-
-                        // Wait for SSH to become available (EC2 instances take time to initialize)
-                        bat 'powershell -Command "Start-Sleep -s 60"' // Increased to 60 seconds
-                        
-                        // Display the inventory file for debugging
-                        bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
-=======
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         dir('ansible') {
                             // Copy key to WSL's filesystem
@@ -99,7 +83,6 @@ pipeline {
                             
                             // Display inventory file for debugging
                             bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
->>>>>>> 8eb5308dcc89bb5d7e71712f8880b3231d587f08
 
                             // Test SSH connectivity
                             bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${env.SERVER_IP} echo Connection successful\""
