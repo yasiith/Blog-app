@@ -53,6 +53,7 @@ pipeline {
                     dir('terraform') {
                         bat 'terraform init'
                         bat 'terraform plan -out=tfplan'
+                        bat 'terraform import aws_instance.web i-026687cddb29a8408'
                         bat 'terraform apply -auto-approve'
                         
                         def output = bat(script: 'terraform output -raw server_ip', returnStdout: true).trim()
