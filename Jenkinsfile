@@ -83,6 +83,18 @@ pipeline {
                 }
             }
         }
+
+        stage('Pull Docker Images and Run Containers') {
+            steps {
+                script {
+                    // Pull Docker images from Docker Hub to the deployment environment
+                    bat 'docker-compose -f docker-compose.yml pull'
+
+                    // Run the containers using the pulled images
+                    bat 'docker-compose -f docker-compose.yml up -d'  // Use -d for detached mode
+                }
+            }
+        }
         
         
     }
