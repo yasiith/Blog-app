@@ -5,8 +5,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'docker-hub-token'
         AWS_ACCESS_KEY_ID = credentials('aws-access-key')
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
-        DOCKER_USER = credentials('docker-hub-token').username
-        DOCKER_PASS = credentials('docker-hub-token').password
+        DOCKER_CREDS = credentials('docker-hub-token')
     }
 
     stages {
@@ -19,7 +18,7 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    bat "set DOCKER_USER=${DOCKER_USER}&& docker-compose -f docker-compose.yml build"
+                    bat "set DOCKER_USER=${DOCKER_CREDS_USR}&& docker-compose -f docker-compose.yml build"
                 }
             }
         }
@@ -27,10 +26,8 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                        bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
-                        bat "set DOCKER_USER=%DOCKER_USER%&& docker-compose -f docker-compose.yml push"
-                    }
+                    bat "echo ${DOCKER_CREDS_PSW} | docker login -u ${DOCKER_CREDS_USR} --password-stdin"
+                    bat "set DOCKER_USER=${DOCKER_CREDS_USR}&& docker-compose -f docker-compose.yml push"
                 }
             }
         }
@@ -56,25 +53,23 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {
-                        withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                            // Set environment variables for Ansible
-                            bat "set SERVER_IP=${env.SERVER_IP}&& set DOCKER_USER=%DOCKER_USER%&& set DOCKER_PASS=%DOCKER_PASS%"
-                            
-                            // Copy key to WSL's own filesystem for proper permissions
-                            bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
-                            bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
-                            bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
-                            
-                            // Create inventory file
-                            bat 'powershell -Command "wsl -d Ubuntu -- echo -n \"[web]\" > inventory.ini"'
-                            bat "powershell -Command \"wsl -d Ubuntu -- echo -n \\\"\\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
-                            
-                            // Wait for SSH to become available
-                            bat 'powershell -Command "Start-Sleep -s 60"'
-                            
-                            // Run ansible with environment variables passed through
-                            bat "powershell -Command \"wsl -d Ubuntu -- DOCKER_USER=%DOCKER_USER% DOCKER_PASS=%DOCKER_PASS% ansible-playbook -i inventory.ini setup.yml -e 'server_ip=${env.SERVER_IP}' -vvv\""
-                        }
+                        // Set environment variables for Ansible
+                        bat "set SERVER_IP=${env.SERVER_IP}&& set DOCKER_USER=${DOCKER_CREDS_USR}&& set DOCKER_PASS=${DOCKER_CREDS_PSW}"
+                        
+                        // Copy key to WSL's own filesystem for proper permissions
+                        bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
+                        
+                        // Create inventory file
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo -n \"[web]\" > inventory.ini"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- echo -n \\\"\\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
+                        
+                        // Wait for SSH to become available
+                        bat 'powershell -Command "Start-Sleep -s 60"'
+                        
+                        // Run ansible with environment variables passed through
+                        bat "powershell -Command \"wsl -d Ubuntu -- DOCKER_USER=${DOCKER_CREDS_USR} DOCKER_PASS=${DOCKER_CREDS_PSW} ansible-playbook -i inventory.ini setup.yml -e 'server_ip=${env.SERVER_IP}' -vvv\""
                     }
                 }
             }
