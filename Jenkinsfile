@@ -71,9 +71,8 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
                         // Create a new inventory file with the correct IP - fixing UTF-8 BOM issue
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo -n \"[web]\" > inventory.ini"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- echo -n \\\"\\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
-                        
+                        wsl -d Ubuntu -- printf "[web]\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\n" > inventory.ini
+
                         // Wait for SSH to become available (EC2 instances take time to initialize)
                         bat 'powershell -Command "Start-Sleep -s 60"' // Increased to 60 seconds
                         
