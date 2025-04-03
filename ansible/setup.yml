@@ -1,38 +1,37 @@
-- hosts: all
+---
+- name: Setup and Run Docker Containers
+  hosts: all
   become: yes
+
   tasks:
-    - name: Update system packages
+    - name: Update all packages
       yum:
         name: '*'
         state: latest
 
-    - name: Install dependencies
+    - name: Install Docker
       yum:
-        name:
-          - yum-utils
-          - device-mapper-persistent-data
-          - lvm2
+        name: docker
         state: present
 
-    - name: Add Docker repository
-      shell: |
-        sudo amazon-linux-extras enable docker
-        sudo yum install -y docker
-
     - name: Start and enable Docker service
-      service:
+      systemd:
         name: docker
         state: started
         enabled: yes
 
+
     - name: Add EC2 user to Docker group (optional, if using non-root user)
+
       user:
         name: ec2-user
         groups: docker
         append: yes
+
 
     - name: Install Docker Compose
       get_url:
         url: "https://github.com/docker/compose/releases/download/v2.22.0/docker-compose-linux-x86_64"
         dest: "/usr/local/bin/docker-compose"
         mode: 'u+x'
+

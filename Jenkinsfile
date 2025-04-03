@@ -5,6 +5,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'docker-hub-token' // Update this with the actual Jenkins credentials ID
         AWS_ACCESS_KEY_ID = credentials('aws-access-key') // Update this with the actual Jenkins credentials ID
         AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+
     }
 
     stages {
@@ -17,7 +18,9 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
+
                     bat 'docker-compose -f docker-compose.yml build'
+
                 }
             }
         }
@@ -25,6 +28,7 @@ pipeline {
         stage('Push Docker Images') {
             steps {
                 script {
+
                     withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         // Login to Docker Hub securely
                         bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
@@ -32,6 +36,7 @@ pipeline {
                         // Push the images to Docker Hub
                         bat 'docker-compose -f docker-compose.yml push'
                     }
+
                 }
             }
         }
@@ -54,6 +59,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Ansible Deployment') {
             steps {
@@ -97,5 +103,6 @@ pipeline {
         }
         
         
+
     }
 }
