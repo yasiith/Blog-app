@@ -16,11 +16,11 @@ sudo usermod -aG docker ec2-user
 echo "Please log out and log back in for Docker group changes to take effect."
 
 # Secure Docker Hub login (Use manual login instead)
-docker login -u "sahanmihikalpa"
+docker login -u "yasiith"
 
 # Pull Docker images from Docker Hub
-docker pull sahanmihikalpa/blogapp:frontend
-docker pull sahanmihikalpa/blogapp:backend
+docker pull yasiith/blogapp:frontend
+docker pull yasiith/blogapp:backend
 docker pull sahanmihikalpa/blogapp:mongo
 
 # Create a Docker network if it doesn't exist
@@ -30,9 +30,9 @@ docker network ls | grep mynetwork || docker network create mynetwork
 docker run -d --name backend_container --network mynetwork \
   -e MONGODB_URI="mongodb+srv://SahanM:Sahan2001@blogger.3xdjq.mongodb.net/?retryWrites=true&w=majority&appname=blogger" \
   -p 5000:5000 \
-  sahanmihikalpa/blogapp:backend
+  yasiith/blogapp:backend
 
 # Run the frontend container
 docker run -d --name frontend_container --network mynetwork \
   -p 80:3000 \
-  sahanmihikalpa/blogapp:frontend
+  yasiith/blogapp:frontend
