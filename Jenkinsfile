@@ -52,7 +52,14 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {  // Navigate to ansible directory
-                        bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml"'
+                        // Set proper permissions on SSH key first
+                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem"'
+                        
+                        // Test SSH connectivity 
+                        bat 'powershell -Command "wsl -d Ubuntu -- ssh -i /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@13.51.200.20 echo Connection successful"'
+                        
+                        // Then run ansible with verbose output
+                        bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv"'
                     }
                 }
             }
