@@ -24,7 +24,7 @@ resource "aws_instance" "web" {
 
 variable "ssh_key_path" {
   description = "Path to the SSH private key"
-  default     = "C:/Users/Asus/Downloads/SahanDevKeyPair.pem"
+  default     = "C:/Users/MSI/Desktop/CV/SahanDevKeyPair.pem"
 }
 
 output "server_ip" {
