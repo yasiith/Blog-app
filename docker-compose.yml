@@ -6,29 +6,21 @@ services:
     image: yasiith/blog-app:latest
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
     image: ${DOCKER_USER:-yasiith}/blogapp:backend
-    working_dir: /app
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend:/app
     environment:
-      - NODE_ENV=development
-    depends_on:
-      - database
-    command: ["npm", "run", "start"]
+      - NODE_ENV=production
     restart: unless-stopped
 
   frontend:
-    build: ./next-blog-app
+    build:
+      context: ./next-blog-app
     image: ${DOCKER_USER:-yasiith}/blogapp:frontend
-    working_dir: /app
     ports:
       - "3000:3000"
-    volumes:
-      - ./next-blog-app:/app
-    command: ["npm", "run", "dev"]
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
     depends_on:
