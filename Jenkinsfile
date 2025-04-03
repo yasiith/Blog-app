@@ -64,13 +64,9 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
-                        // Get the server IP directly from Terraform
-                        def server_ip_cmd = bat(script: 'cd ../terraform && terraform output -raw server_ip', returnStdout: true).trim()
-                        def server_ip = server_ip_cmd.readLines().last()
-                        
-                        // Create a new inventory file with the correct IP
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"[web]\\" > inventory.ini"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- echo \\\"${server_ip} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
+                        // Create a new inventory file with the correct IP - fixing UTF-8 BOM issue
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo -n \"[web]\" > inventory.ini"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- echo -n \\\"\\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
                         
                         // Wait for SSH to become available (EC2 instances take time to initialize)
                         bat 'powershell -Command "Start-Sleep -s 60"' // Increased to 60 seconds
@@ -79,10 +75,10 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
 
                         // Test SSH connectivity with the new key location
-                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${server_ip} echo Connection successful\""
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no -o ConnectionAttempts=5 -o ConnectTimeout=60 ec2-user@${env.SERVER_IP} echo Connection successful\""
                         
-                        // Then run ansible with the updated inventory
-                        bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv"'
+                        // Then run ansible with the updated inventory - using -e to pass parameters
+                        bat "powershell -Command \"wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv\""
                     }
                 }
             }
@@ -92,42 +88,40 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {
-                        // Get the server IP directly from Terraform
-                        def server_ip_cmd = bat(script: 'cd ../terraform && terraform output -raw server_ip', returnStdout: true).trim()
-                        def server_ip = server_ip_cmd.readLines().last()
+                        // Create deploy.yml file using echo commands instead of heredoc
+                        bat 'powershell -Command "wsl -d Ubuntu -- rm -f deploy.yml"' // Remove if exists
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'---\' > deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'- hosts: web\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'  become: yes\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'  tasks:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'    - name: Login to Docker Hub\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'      shell: docker login -u {{ docker_user }} -p {{ docker_password }}\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'      no_log: true\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'    - name: Pull Docker images\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'      shell: docker pull yasiith/first-job-backend:latest && docker pull yasiith/first-job-frontend:latest\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'    - name: Create docker-compose.yml file\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'      copy:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'        dest: /home/ec2-user/docker-compose.yml\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'        content: |\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'          version: \"3\"\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'          services:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'            backend:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              image: yasiith/first-job-backend:latest\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              ports:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'                - \"8080:8080\"\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              restart: always\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'            frontend:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              image: yasiith/first-job-frontend:latest\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              ports:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'                - \"3000:3000\"\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              depends_on:\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'                - backend\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'              restart: always\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'    - name: Run Docker Compose\' >> deploy.yml"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \'      shell: cd /home/ec2-user && docker-compose up -d\' >> deploy.yml"'
                         
-                        // Create a docker-compose.yml deployment playbook
-                        bat 'powershell -Command "wsl -d Ubuntu -- cat > deploy.yml << \\"EOF\\""'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"---\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"- hosts: web\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"  become: yes\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"  tasks:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"    - name: Login to Docker Hub\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"      shell: docker login -u {{ docker_user }} -p {{ docker_password }}\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"      no_log: true\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"    - name: Pull Docker images\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"      shell: docker pull yasiith/first-job-backend:latest && docker pull yasiith/first-job-frontend:latest\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"    - name: Create docker-compose.yml file\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"      copy:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"        dest: /home/ec2-user/docker-compose.yml\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"        content: |\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"          version: \\\\\\"3\\\\\\"\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"          services:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"            backend:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              image: yasiith/first-job-backend:latest\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              ports:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"                - \\\\\\"8080:8080\\\\\\"\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              restart: always\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"            frontend:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              image: yasiith/first-job-frontend:latest\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              ports:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"                - \\\\\\"3000:3000\\\\\\"\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              depends_on:\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"                - backend\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"              restart: always\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"    - name: Run Docker Compose\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"      shell: cd /home/ec2-user && docker-compose up -d\\" >> deploy.yml"'
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"EOF\\""'
+                        // Display the deploy.yml file for debugging
+                        bat 'powershell -Command "wsl -d Ubuntu -- cat deploy.yml"'
                         
                         // Run the deploy playbook with Docker Hub credentials
                         withCredentials([usernamePassword(credentialsId: DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
