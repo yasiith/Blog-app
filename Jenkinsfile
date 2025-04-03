@@ -37,12 +37,22 @@ pipeline {
             }
         }
 
-        stage('Terraform Deploy'){
+        stage('Terraform EC2 Instance') {
             steps {
                 script{
                     dir('terraform'){
                         bat 'terraform init'
                         bat 'terraform apply -auto-approve'
+                    }
+                }
+            }
+        }
+
+        stage('Ansible Deployment') {
+            steps {
+                script {
+                    dir('ansible') {  // Navigate to ansible directory
+                        bat 'ansible-playbook -i inventory.ini ansible-playbook.yml'
                     }
                 }
             }
