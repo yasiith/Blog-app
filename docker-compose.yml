@@ -29,8 +29,6 @@ services:
       - backend
     restart: unless-stopped
 
-
-
   database:
     image: mongo:latest
     ports:
