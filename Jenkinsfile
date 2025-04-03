@@ -51,8 +51,6 @@ pipeline {
             steps {
                 script {
                     dir('terraform') {
-                        // If you want to use local state, make sure it's preserved between runs
-                        // This requires configuring Jenkins to preserve the workspace between builds
                         bat 'terraform init'
                         bat 'terraform plan -out=tfplan'
                         bat 'terraform apply -auto-approve'
