@@ -2,50 +2,21 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
     image: ${DOCKER_USER}/blogapp:backend
-    working_dir: /app
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend:/app
     environment:
-      - NODE_ENV=development
       - MONGODB_URI=mongodb+srv://SahanM:Sahan2001@blogger.3xdjq.mongodb.net/?retryWrites=true&w=majority&appname=blogger
       - CLOUDINARY_CLOUD_NAME=dsecpawul
       - CLOUDINARY_API_KEY=586741624489412
       - CLOUDINARY_API_SECRET=g3afHFKSY5R8dYeRI-UeLCxFNTs
       - JWT_SECRET=da15d3d7717b8f3252275be8bbd0f9854252ce5d20efa758f3c8b7261875c263
-    depends_on:
-      - database
-    command: ["npm", "run", "start"]
     restart: unless-stopped
 
   frontend:
-    build: 
-      context: ./next-blog-app
-      dockerfile: Dockerfile
     image: ${DOCKER_USER}/blogapp:frontend
-    working_dir: /app
     ports:
       - "80:3000"
-    volumes:
-      - ./next-blog-app:/app
-    command: ["npm", "run", "dev"]
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
       - REACT_APP_API_URL=http://${SERVER_IP}:5000
-    depends_on:
-      - backend
     restart: unless-stopped
-
-  database:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    restart: unless-stopped
-
-volumes:
-  mongo-data:

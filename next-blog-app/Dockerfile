@@ -1,23 +1,18 @@
-# Use a base image for frontend
-FROM node:latest
+FROM node:18-alpine AS builder
 
-# Set working directory inside the container
 WORKDIR /app
-
-# Copy package.json and package-lock.json
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy project files
 COPY . .
-
-# Build the frontend
 RUN npm run build
 
-# Expose the port (if needed)
-EXPOSE 3000
+FROM node:18-alpine
+WORKDIR /app
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/next.config.mjs ./next.config.mjs
 
-# Run the app in production mode
+EXPOSE 3000
 CMD ["npm", "run", "start"]
