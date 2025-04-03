@@ -61,9 +61,12 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
-                        // Create inventory file
-                        bat 'powershell -Command "wsl -d Ubuntu -- echo -n \"[web]\" > inventory.ini"'
-                        bat "powershell -Command \"wsl -d Ubuntu -- echo -n \\\"\\n${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\\" >> inventory.ini\""
+                        // Create inventory file - FIXED
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"[web]\" > inventory.ini\'"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\" >> inventory.ini'\""
+                        
+                        // Print inventory file for debugging
+                        bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
                         
                         // Wait for SSH to become available
                         bat 'powershell -Command "Start-Sleep -s 60"'
@@ -79,11 +82,14 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {
-                        // Copy docker-compose to the remote server
+                        // Copy docker-compose.yml to remote server
                         bat "powershell -Command \"wsl -d Ubuntu -- scp -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ../docker-compose.yml ec2-user@${env.SERVER_IP}:/home/ec2-user/\""
                         
-                        // Deploy containers via SSH using the same key path established in previous stage
-                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'cd /home/ec2-user && sudo docker-compose -f docker-compose.yml pull && sudo docker-compose -f docker-compose.yml up -d'\""
+                        // Install Docker Compose if not already installed
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo yum install -y docker && sudo systemctl start docker && sudo systemctl enable docker && sudo curl -L \\\"https://github.com/docker/compose/releases/download/v2.22.0/docker-compose-linux-x86_64\\\" -o /usr/local/bin/docker-compose && sudo chmod +x /usr/local/bin/docker-compose'\""
+                        
+                        // Deploy containers using the installed Docker Compose
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'cd /home/ec2-user && sudo DOCKER_USER=${DOCKER_CREDS_USR} SERVER_IP=${env.SERVER_IP} /usr/local/bin/docker-compose -f docker-compose.yml pull && sudo DOCKER_USER=${DOCKER_CREDS_USR} SERVER_IP=${env.SERVER_IP} /usr/local/bin/docker-compose -f docker-compose.yml up -d'\""
                         
                         // Verify deployment
                         bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo docker ps'\""
