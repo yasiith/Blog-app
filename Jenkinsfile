@@ -74,6 +74,23 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy Application') {
+            steps {
+                script {
+                    dir('ansible') {
+                        // Copy docker-compose to the remote server
+                        bat "powershell -Command \"wsl -d Ubuntu -- scp -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ../docker-compose.yml ec2-user@${env.SERVER_IP}:/home/ec2-user/\""
+                        
+                        // Deploy containers via SSH using the same key path established in previous stage
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'cd /home/ec2-user && sudo docker-compose -f docker-compose.yml pull && sudo docker-compose -f docker-compose.yml up -d'\""
+                        
+                        // Verify deployment
+                        bat "powershell -Command \"wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@${env.SERVER_IP} 'sudo docker ps'\""
+                    }
+                }
+            }
+        }
         
         stage('Deployment Success') {
             steps {
