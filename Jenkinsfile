@@ -61,15 +61,31 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
-                        // Create inventory file - FIXED
+                        // Create inventory file
                         bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"[web]\" > inventory.ini\'"'
                         bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"${env.SERVER_IP} ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\" >> inventory.ini'\""
                         
                         // Print inventory file for debugging
                         bat 'powershell -Command "wsl -d Ubuntu -- cat inventory.ini"'
                         
-                        // Create a separate wait-for-ssh script file
-                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'cat > wait-for-ssh.sh << EOF\\n#!/bin/bash\\nMAX_ATTEMPTS=30\\nCOUNTER=0\\necho \"Waiting for SSH connection to ${env.SERVER_IP}...\"\\nwhile [ \\$COUNTER -lt \\$MAX_ATTEMPTS ]; do\\n  COUNTER=\\$((COUNTER+1))\\n  echo \"Attempt \\$COUNTER of \\$MAX_ATTEMPTS\"\\n  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@${env.SERVER_IP} exit 2>/dev/null\\n  if [ \\$? -eq 0 ]; then\\n    echo \"SSH connection successful!\"\\n    exit 0\\n  fi\\n  echo \"Waiting 5 seconds before next attempt...\"\\n  sleep 5\\ndone\\necho \"Failed to establish SSH connection after \\$MAX_ATTEMPTS attempts\"\\nexit 1\\nEOF'\""
+                        // Create a simpler wait-for-ssh script file with line-by-line commands to avoid escaping issues
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"#!/bin/bash\" > wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"MAX_ATTEMPTS=30\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"COUNTER=0\" >> wait-for-ssh.sh\'"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"echo \\\"Waiting for SSH connection to ${env.SERVER_IP}...\\\"\" >> wait-for-ssh.sh'\""
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"while [ \\$COUNTER -lt \\$MAX_ATTEMPTS ]; do\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  COUNTER=\\$((COUNTER+1))\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  echo \\\"Attempt \\$COUNTER of \\$MAX_ATTEMPTS\\\"\" >> wait-for-ssh.sh\'"'
+                        bat "powershell -Command \"wsl -d Ubuntu -- bash -c 'echo \"  ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes ec2-user@${env.SERVER_IP} exit 2>/dev/null\" >> wait-for-ssh.sh'\""
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  if [ \\$? -eq 0 ]; then\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"    echo \\\"SSH connection successful!\\\"\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"    exit 0\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  fi\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  echo \\\"Waiting 5 seconds before next attempt...\\\"\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"  sleep 5\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"done\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"echo \\\"Failed to establish SSH connection after \\$MAX_ATTEMPTS attempts\\\"\" >> wait-for-ssh.sh\'"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- bash -c \'echo \"exit 1\" >> wait-for-ssh.sh\'"'
                         
                         // Make the script executable
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod +x wait-for-ssh.sh"'
