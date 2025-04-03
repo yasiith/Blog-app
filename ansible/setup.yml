@@ -1,47 +1,52 @@
-- hosts: all
+---
+- name: Setup and Run Docker Containers
+  hosts: all
   become: yes
+  vars:
+    docker_user: "{{ docker_user | default('yasiith') }}"
+    server_ip: "{{ server_ip | default('localhost') }}"
+
   tasks:
-    - name: Update system packages
+    - name: Update all packages
       yum:
         name: '*'
         state: latest
 
-    - name: Install dependencies
+    - name: Install Docker
       yum:
-        name:
-          - yum-utils
-          - device-mapper-persistent-data
-          - lvm2
+        name: docker
         state: present
 
-    - name: Add Docker repository
-      shell: |
-        sudo amazon-linux-extras enable docker
-        sudo yum install -y docker
-
     - name: Start and enable Docker service
-      service:
+      systemd:
         name: docker
         state: started
         enabled: yes
 
-    - name: Add EC2 user to Docker group (optional, if using non-root user)
+    - name: Add ec2-user to docker group
       user:
         name: ec2-user
         groups: docker
         append: yes
 
-    - name: Pull the Docker images
-      command: |
-        docker pull sahanmihikalpa/blogapp:frontend
-        docker pull sahanmihikalpa/blogapp:backend
-        docker pull sahanmihikalpa/blogapp:mongo
+    - name: Pull Docker images
+      command: docker pull {{ item }}
+      with_items:
+        - "yasiith/blogapp:frontend" 
+        - "yasiith/blogapp:backend" 
 
-    - name: Run MongoDB container
-      command: docker run -d --name mongo_container -p 27017:27017 sahanmihikalpa/blogapp:mongo
 
-    - name: Run Backend container
-      command: docker run -d --name backend_container -p 5000:5000 --link mongo_container:mongo sahanmihikalpa/blogapp:backend
+    - name: Create Docker network if not exists
+      command: docker network ls | grep mynetwork || docker network create mynetwork
 
-    - name: Run Frontend container
-      command: docker run -d --name frontend_container -p 80:80 --link backend_container:backend sahanmihikalpa/blogapp:frontend
+    - name: Run backend container
+      command: >
+        docker run -d --name backend_container --network mynetwork
+        -e MONGODB_URI="mongodb+srv://SahanM:Sahan2001@blogger.3xdjq.mongodb.net/?retryWrites=true&w=majority&appname=blogger"
+        -p 5000:5000 yasiith/blogapp:backend 
+
+    - name: Run frontend container
+      command: >
+        docker run -d --name frontend_container --network mynetwork
+        -p 80:3000 yasiith/blogapp:frontend
+

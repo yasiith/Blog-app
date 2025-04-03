@@ -1,33 +1,39 @@
-# C:\Users\Asus\Desktop\6th SEM\DevOps\Webapp\Blog-app\docker-compose.yml
-
 version: '3.8'
 
 services:
+  app:
+    build: .
+    image: yasiith/blog-app:latest
+
   backend:
-  
-    build: ./backend
+    build:
+      context: ./backend
+    image: ${DOCKER_USER:-yasiith}/blogapp:backend
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend:/app
     environment:
       - NODE_ENV=production
-    depends_on:
-      - database
-    command: ["npm", "run", "start"]
+    restart: unless-stopped
 
   frontend:
-    build: ./next-blog-app
+    build:
+      context: ./next-blog-app
+    image: ${DOCKER_USER:-yasiith}/blogapp:frontend
     ports:
       - "3000:3000"
+<<<<<<< HEAD
     volumes:
       - ./next-blog-app:/app
     command: ["npm", "run", "dev"]
+
+    
+=======
     environment:
       - NEXT_PUBLIC_BACKEND_URL=http://backend:5000
-    
+>>>>>>> 8eb5308dcc89bb5d7e71712f8880b3231d587f08
     depends_on:
       - backend
+    restart: unless-stopped
 
   database:
     image: mongo:latest
@@ -35,6 +41,7 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    restart: unless-stopped
 
 volumes:
   mongo-data:

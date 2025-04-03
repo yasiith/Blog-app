@@ -22,7 +22,7 @@ const Header = () => {
         </div>
       </div>
       <div className='text-center my-8'>
-        <h1 className='text-3xl sm:text-5xl font-medium'>Latest Blogs</h1>
+        <h1 className='text-3xl sm:text-5xl font-medium'>Newest Blogs</h1>
         <p className='mt-10 max-w-[740px] m-auto text-xs sm:text-base'>
           Lorem ipsum dolor sit, amet consectetur adipisicing elit. Id aut libero similique necessitatibus dolorem, exercitationem eaque temporibus iste, ut veritatis deleniti. Beatae, alias earum expedita culpa facilis ut saepe laboriosam!
         </p>

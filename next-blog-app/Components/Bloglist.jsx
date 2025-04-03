@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import BlogItem from './BlogItem';
 
+
 const API_URL = process.env.REACT_APP_API_URL;
+
 
 const Bloglist = () => {
   const [menu, setMenu] = useState('All');
@@ -11,7 +13,9 @@ const Bloglist = () => {
   useEffect(() => {
     const fetchBlogs = async () => {
       try {
+
         const res = await fetch('${API_URL}/api/blogs/Allblogs');
+
         if (res.ok) {
           const data = await res.json();
           setBlogs(data.blogs);
