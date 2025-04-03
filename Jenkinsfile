@@ -57,11 +57,12 @@ pipeline {
                         bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
                         bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
-                        // Update the inventory file to use the new key location
-                        bat 'powershell -Command "wsl -d Ubuntu -- sed -i \'s|/mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem|~/ansible-keys/SahanDevKeyPair.pem|\' inventory.ini"'
+                        // Create a new inventory file directly instead of using sed
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"[web]\\" > inventory.ini"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- echo \\"16.171.196.13 ansible_user=ec2-user ansible_ssh_private_key_file=~/ansible-keys/SahanDevKeyPair.pem ansible_python_interpreter=/usr/bin/python3\\" >> inventory.ini"'
                         
                         // Test SSH connectivity with the new key location
-                        bat 'powershell -Command "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@16.171.129.154 echo Connection successful"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@16.171.196.13 echo Connection successful"'
                         
                         // Then run ansible with the updated inventory
                         bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv"'
