@@ -52,13 +52,18 @@ pipeline {
             steps {
                 script {
                     dir('ansible') {  // Navigate to ansible directory
-                        // Set proper permissions on SSH key first
-                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem"'
+                        // Copy key to WSL's own filesystem for proper permissions
+                        bat 'powershell -Command "wsl -d Ubuntu -- mkdir -p ~/ansible-keys"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- cp /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem ~/ansible-keys/"'
+                        bat 'powershell -Command "wsl -d Ubuntu -- chmod 600 ~/ansible-keys/SahanDevKeyPair.pem"'
                         
-                        // Test SSH connectivity 
-                        bat 'powershell -Command "wsl -d Ubuntu -- ssh -i /mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@13.51.200.20 echo Connection successful"'
+                        // Update the inventory file to use the new key location
+                        bat 'powershell -Command "wsl -d Ubuntu -- sed -i \'s|/mnt/c/Users/MSI/Desktop/CV/SahanDevKeyPair.pem|~/ansible-keys/SahanDevKeyPair.pem|\' inventory.ini"'
                         
-                        // Then run ansible with verbose output
+                        // Test SSH connectivity with the new key location
+                        bat 'powershell -Command "wsl -d Ubuntu -- ssh -i ~/ansible-keys/SahanDevKeyPair.pem -o StrictHostKeyChecking=no ec2-user@16.171.129.154 echo Connection successful"'
+                        
+                        // Then run ansible with the updated inventory
                         bat 'powershell -Command "wsl -d Ubuntu -- ansible-playbook -i inventory.ini setup.yml -vvv"'
                     }
                 }
