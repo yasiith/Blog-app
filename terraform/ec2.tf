@@ -1,11 +1,20 @@
 resource "aws_instance" "web" {
-  
+
   ami           = "ami-03f71e078efdce2c9"  # Amazon Linux 2 in us-east-1
   instance_type = "t3.micro"
   key_name      = "SahanDevKeyPair"
 
+  # Use a constant tag to identify this as the same logical instance
   tags = {
     Name = "BlogApp"
+    Environment = "production"
+    ManagedBy = "terraform"
+  }
+
+  # Add lifecycle policy to prevent replacement
+  lifecycle {
+    prevent_destroy = false
+    ignore_changes = [ami]
   }
 
   provisioner "local-exec" {
