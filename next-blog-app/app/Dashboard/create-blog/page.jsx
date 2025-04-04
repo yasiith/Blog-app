@@ -54,7 +54,7 @@ export default function CreateBlog() {
   
     try {
       // Fetch Cloudinary signature from your backend
-      const signatureResponse = await fetch('http://localhost:5000/api/cloudinary/sign');
+      const signatureResponse = await fetch('http://13.60.94.142:5000/api/cloudinary/sign');
       const { signature, timestamp, api_key } = await signatureResponse.json();
   
       // Upload image to Cloudinary

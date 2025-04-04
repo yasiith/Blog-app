@@ -11,7 +11,7 @@ export default function Blogs() {
   useEffect(() => {
     const fetchBlogs = async () => {
       const token = localStorage.getItem('token');
-      const res = await fetch('${API_URL}/api/blogs', {
+      const res = await fetch('http://13.60.94.142:5000/api/blogs', {
         method: 'GET',
         headers: { 
           'Content-Type': 'application/json', 
