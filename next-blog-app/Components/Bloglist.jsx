@@ -14,7 +14,7 @@ const Bloglist = () => {
     const fetchBlogs = async () => {
       try {
 
-        const res = await fetch('${API_URL}/api/blogs/Allblogs');
+        const res = await fetch('http://13.60.94.142:5000/api/blogs/Allblogs');
 
         if (res.ok) {
           const data = await res.json();

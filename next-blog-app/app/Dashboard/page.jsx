@@ -22,7 +22,7 @@ export default function Dashboard() {
       }
 
       try {
-        const res = await fetch('${API_URL}/api/blogs', {
+        const res = await fetch('http://13.60.94.142:5000/api/blogs', {
           headers: { Authorization: `Bearer ${token}` },
         });
 

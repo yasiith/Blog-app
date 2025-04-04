@@ -26,7 +26,7 @@ export default function Register() {
     setLoading(true); // Set loading to true when starting the request
 
     try {
-      const res = await fetch('${API_URL}/api/auth/register', {
+      const res = await fetch('http://13.60.94.142:5000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password }),
